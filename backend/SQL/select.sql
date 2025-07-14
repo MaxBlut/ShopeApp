@@ -7,4 +7,6 @@ SELECT i.name,
 FROM cart_items ci
     JOIN items i ON ci.item_id = i.id
     JOIN carts c ON ci.cart_id = c.id
-WHERE c.user_id = 1;
+WHERE c.user_id = 4;
+SELECT *
+FROM cart_items

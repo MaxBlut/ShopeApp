@@ -117,15 +117,25 @@ router.put("/update", (req, res) => {
 
   const updatePromises = updates.map(({ userId, itemId, quantity }) => {
     return new Promise((resolve, reject) => {
+      // First get the cart ID for this user
       db.query(
-        "UPDATE cart_items SET quantity = ? WHERE cart_id = ? AND item_id = ?",
-        [quantity, userId, itemId],
-        (err) => {
-          if (err) {
-            console.log("error n 2");
-            return reject(err);
-          }
-          resolve();
+        "SELECT id FROM carts WHERE user_id = ?",
+        [userId],
+        (err, cartResult) => {
+          if (err) return reject(err);
+          if (cartResult.length === 0) return reject("Cart not found");
+
+          const cartId = cartResult[0].id;
+
+          // Then update the quantity
+          db.query(
+            "UPDATE cart_items SET quantity = ? WHERE cart_id = ? AND item_id = ?",
+            [quantity, cartId, itemId],
+            (err2) => {
+              if (err2) return reject(err2);
+              resolve();
+            }
+          );
         }
       );
     });
@@ -139,6 +149,7 @@ router.put("/update", (req, res) => {
     });
 });
 
+// DELETE a specific item from a user's cart
 router.delete("/delete", (req, res) => {
   const { userId, itemId } = req.body;
 
@@ -146,17 +157,35 @@ router.delete("/delete", (req, res) => {
     return res.status(400).json({ error: "Missing userId or itemId" });
   }
 
-  // Delete the item from cart_items
+  // First, find the cart ID for this user
   db.query(
-    "DELETE FROM cart_items WHERE cart_id = ? AND item_id = ?",
-    [userId, itemId],
-    (err2, result2) => {
-      if (err2) {
-        console.error("Error deleting item from cart:", err2);
-        return res.status(500).json({ error: "Failed to delete item" });
+    "SELECT id FROM carts WHERE user_id = ?",
+    [userId],
+    (err, results) => {
+      if (err) {
+        console.error("Error finding cart:", err);
+        return res.status(500).json({ error: "Database error" });
       }
 
-      res.json({ message: "Item removed from cart successfully" });
+      if (results.length === 0) {
+        return res.status(404).json({ error: "Cart not found for user" });
+      }
+
+      const cartId = results[0].id;
+
+      // Delete the item from cart_items
+      db.query(
+        "DELETE FROM cart_items WHERE cart_id = ? AND item_id = ?",
+        [cartId, itemId],
+        (err2, result2) => {
+          if (err2) {
+            console.error("Error deleting item from cart:", err2);
+            return res.status(500).json({ error: "Failed to delete item" });
+          }
+
+          res.json({ message: "Item removed from cart successfully" });
+        }
+      );
     }
   );
 });

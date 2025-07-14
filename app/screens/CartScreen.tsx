@@ -126,7 +126,7 @@ const CartScreen = () => {
     <View style={styles.container}>
       {user ? (
         cartItems.length === 0 ? (
-          <Text style={styles.updateButtonText}>cart is empty</Text>
+          <Text style={styles.empty}>cart is empty</Text>
         ) : (
           <FlatList
             data={cartItems}
